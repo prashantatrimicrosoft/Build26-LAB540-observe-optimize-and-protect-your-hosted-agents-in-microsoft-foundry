@@ -8,6 +8,7 @@ pandas
 
 # Microsoft Foundry
 azure-ai-projects>=2.0.0
+azure-ai-evaluation
 
 # Zava Concierge agent dependencies
 -r zava/src/zava-travel-concierge/requirements.txt
