@@ -13,6 +13,7 @@ from typing import Any
 
 from agent_framework import Agent, tool
 from agent_framework.foundry import FoundryChatClient
+from agent_framework.observability import configure_otel_providers
 from agent_framework_foundry_hosting import ResponsesHostServer
 from azure.identity import DefaultAzureCredential
 from dotenv import load_dotenv
@@ -20,6 +21,21 @@ from pydantic import Field
 from typing_extensions import Annotated
 
 load_dotenv()
+
+# ---------------------------------------------------------------------------
+# Tracing setup
+# ---------------------------------------------------------------------------
+# When running locally with VS Code Foundry Toolkit, traces go to the
+# built-in trace viewer via gRPC on port 4317.
+# When deployed as a hosted agent, set OTEL_EXPORTER_OTLP_ENDPOINT to your
+# OTLP collector (e.g. the Azure Monitor OpenTelemetry endpoint).
+# enable_sensitive_data=True captures full prompt/response content in spans.
+# ---------------------------------------------------------------------------
+_VS_CODE_PORT = int(os.environ.get("OTEL_VSCODE_PORT", "0"))
+configure_otel_providers(
+    vs_code_extension_port=_VS_CODE_PORT if _VS_CODE_PORT else None,
+    enable_sensitive_data=True,
+)
 
 DATA_DIR = Path(__file__).parent / "data"
 
@@ -168,26 +184,31 @@ def _make_client() -> FoundryChatClient:
 
 CONCIERGE_INSTRUCTIONS = """You are the **Zava Travel Concierge**, the single AI assistant that travelers
 talk to at Zava Travel — a premium agency that books flights, hotels, and car
-rentals across Paris, London, Tokyo, Rome, and Cancún.
+rentals across Paris, London, Tokyo, Rome, and Cancun.
 
 You are warm, professional, and concise. You never answer flight, hotel, or
-car-rental questions from your own knowledge — you delegate to specialist
+car-rental questions from your own knowledge -- you delegate to specialist
 agents available as tools:
 
-- `flight_agent` — for routes, airlines, cabin classes, prices, availability
-- `hotel_agent` — for properties, star ratings, amenities, nightly rates
-- `car_rental_agent` — for vehicles, daily rates, pickup cities
+- `flight_agent` -- for routes, airlines, cabin classes, prices, availability
+- `hotel_agent` -- for properties, star ratings, amenities, nightly rates
+- `car_rental_agent` -- for vehicles, daily rates, pickup cities
 
 Rules:
-1. For multi-component requests (e.g. "plan a trip…"), call each relevant
+1. For multi-component requests (e.g. "plan a trip..."), call each relevant
    specialist independently in parallel, then merge the results into one
    itinerary.
 2. Always cite the Zava ID (e.g. ZV-FL-013, ZV-HT-010, ZV-CR-011), price, and
    dates in your recommendation.
 3. Never fabricate flights, hotels, vehicles, prices, or IDs. If a specialist
    returns no results, say so plainly.
-4. Lead with the recommendation, then a short reason it fits. Offer one
-   meaningful alternative when useful. Currency is USD unless stated.
+4. Write every response in warm, natural prose -- the tone of a knowledgeable
+   personal travel concierge, not a data printout. Structure your response
+   clearly: start with a friendly recommendation sentence, follow with the key
+   details (ID, price, dates), then offer one meaningful alternative when useful.
+   Avoid over-explaining, off-topic information, or rambling. Keep responses
+   tightly scoped to the user's query (e.g., a flight query should lead with
+   flights, not hotels). Currency is USD unless stated.
 5. Decline non-travel, unsafe, or policy-violating requests in one sentence.
 """
 

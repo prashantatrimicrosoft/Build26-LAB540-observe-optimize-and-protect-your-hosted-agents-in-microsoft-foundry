@@ -6,16 +6,14 @@ requiredVersions:
 name: zava-travel-concierge
 services:
     zava-concierge:
-        project: src/zava-travel-concierge
+        project: .
         host: azure.ai.agent
         language: docker
-        docker:
-            remoteBuild: true
         config:
             container:
                 resources:
-                    cpu: "0.25"
-                    memory: 0.5Gi
+                    cpu: "0.5"
+                    memory: 1Gi
             deployments:
                 - model:
                     format: OpenAI
@@ -25,7 +23,6 @@ services:
                   sku:
                     capacity: 100
                     name: GlobalStandard
-            startupCommand: python main.py
 infra:
     provider: bicep
     path: ./infra
